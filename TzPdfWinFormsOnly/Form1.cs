@@ -13,35 +13,30 @@ namespace TzPdfWinFormsOnly
             InitializeComponent();
         }
 
-        // Обработчик события для текстового поля textBox1 (поиск)
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            // Получаем текст, введенный в textBox1
             string searchTerm = textBox1.Text;
 
-            if (!string.IsNullOrWhiteSpace(searchTerm))
+            if (!string.IsNullOrWhiteSpace(searchTerm) && int.TryParse(searchTerm, out int fileNumber))
             {
-                // Ищем и отображаем результат в textBox2
-                SearchAndDisplayFile(searchTerm);
+                Result(fileNumber);
             }
             else
             {
-                // Если текст пустой, очищаем textBox2
                 textBox2.Clear();
             }
         }
 
-        // Метод для поиска и вывода данных из файла
-        private void SearchAndDisplayFile(string fileNumber)
+        private void Result(int fileNumber)
         {
-            string connectionString = "server=localhost;user=root;password=root;database=pdf";
+            string connectionString = "server=localhost;user=root;password=root;database=files";
             using (MySqlConnection conn = new MySqlConnection(connectionString))
             {
                 conn.Open();
-                string query = "SELECT Path FROM info WHERE ID = @ID";
+                string query = "SELECT Path FROM info WHERE Name = @Number";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@ID", fileNumber);
+                    cmd.Parameters.AddWithValue("@Number", fileNumber);
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.HasRows)
@@ -50,13 +45,10 @@ namespace TzPdfWinFormsOnly
                             {
                                 string filePath = reader.GetString("Path");
 
-                                // Проверяем, существует ли файл
                                 if (File.Exists(filePath))
                                 {
-                                    // Извлекаем текст из файла
-                                    string fileText = ExtractTextFromPdf(filePath);
+                                    string fileText = ReadBinary(filePath);
 
-                                    // Отображаем содержимое файла в textBox2
                                     textBox2.Text = fileText;
                                 }
                                 else
@@ -74,14 +66,14 @@ namespace TzPdfWinFormsOnly
             }
         }
 
-        // Метод для извлечения текста из PDF файла
-        private string ExtractTextFromPdf(string filePath)
+        private string ReadBinary(string filePath)
         {
-            // Используем библиотеку iTextSharp для извлечения текста
             StringBuilder text = new StringBuilder();
             try
             {
-                using (iTextSharp.text.pdf.PdfReader reader = new iTextSharp.text.pdf.PdfReader(filePath))
+                byte[] fileBytes = File.ReadAllBytes(filePath);
+
+                using (iTextSharp.text.pdf.PdfReader reader = new iTextSharp.text.pdf.PdfReader(fileBytes))
                 {
                     for (int page = 1; page <= reader.NumberOfPages; page++)
                     {
@@ -91,7 +83,7 @@ namespace TzPdfWinFormsOnly
             }
             catch (Exception ex)
             {
-                text.AppendLine("Error reading PDF: " + ex.Message);
+                text.AppendLine("Error: " + ex.Message);
             }
             return text.ToString();
         }
