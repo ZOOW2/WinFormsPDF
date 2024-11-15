@@ -3,6 +3,8 @@ using System.IO;
 using System.Text;
 using MySql.Data.MySqlClient;
 using System.Windows.Forms;
+using iTextSharp.text.pdf;
+using iTextSharp.text.pdf.parser;
 
 namespace TzPdfWinFormsOnly
 {
@@ -43,41 +45,31 @@ namespace TzPdfWinFormsOnly
                         {
                             while (reader.Read())
                             {
-                                string filePath = reader.GetString("Path");
+                                byte[] fileData = (byte[])reader["Path"];
 
-                                if (File.Exists(filePath))
-                                {
-                                    string fileText = ReadBinary(filePath);
-
-                                    textBox2.Text = fileText;
-                                }
-                                else
-                                {
-                                    textBox2.Text = "File not found.";
-                                }
+                                string fileText = ReadBinary(fileData);
+                                textBox2.Text = fileText;
                             }
                         }
                         else
                         {
-                            textBox2.Text = "No data found for this number.";
+                            textBox2.Text = "No data found.";
                         }
                     }
                 }
             }
         }
 
-        private string ReadBinary(string filePath)
+        private string ReadBinary(byte[] fileData)
         {
             StringBuilder text = new StringBuilder();
             try
             {
-                byte[] fileBytes = File.ReadAllBytes(filePath);
-
-                using (iTextSharp.text.pdf.PdfReader reader = new iTextSharp.text.pdf.PdfReader(fileBytes))
+                using (PdfReader reader = new PdfReader(fileData))
                 {
                     for (int page = 1; page <= reader.NumberOfPages; page++)
                     {
-                        text.AppendLine(iTextSharp.text.pdf.parser.PdfTextExtractor.GetTextFromPage(reader, page));
+                        text.AppendLine(PdfTextExtractor.GetTextFromPage(reader, page));
                     }
                 }
             }
